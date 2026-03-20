@@ -1,0 +1,30 @@
+def counting_sort_exp(arr, exp):
+    n = len(arr)
+    output = [0] * n
+    count = [0] * 10
+
+    for i in arr:
+        index = i // exp
+        count[index % 10] += 1
+
+    for i in range(1, 10):
+        count[i] += count[i - 1]
+
+    i = n - 1
+    while i >= 0:
+        index = arr[i] // exp
+        output[count[index % 10] - 1] = arr[i]
+        count[index % 10] -= 1
+        i -= 1
+
+    return output
+
+def radix_sort(arr):
+    max_val = max(arr)
+    exp = 1
+    
+    while max_val // exp > 0:
+        arr = counting_sort_exp(arr, exp)
+        exp *= 10
+    
+    return arr
