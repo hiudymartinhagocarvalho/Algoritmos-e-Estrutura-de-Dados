@@ -1,8 +1,22 @@
+"""
+array_linear.py
+───────────────
+Implementação do Array Linear e experimento comparativo entre
+busca sequencial O(n) e busca binária O(log n).
+
+Métricas coletadas por operação:
+  - Tempo de Execução (s)
+  - Memória Alocada pelo Programa (KB)  — tracemalloc
+  - RAM Consumida (KB)                  — psutil
+  - CPU Médio e Pico (%)                — psutil + thread
+  - Comparações por Busca               — contagem interna
+"""
+
 import random
 import statistics
 import time
 
-from monitor import carregar_csv, medir_bloco, resumo_print
+from monitor import carregar_csv, imprimir_tabela, medir_bloco, resumo_print
 
 
 # ─────────────────────────────────────────────
@@ -19,7 +33,7 @@ class ArrayLinear:
 
     def busca_sequencial(self, matricula: str) -> tuple:
         """
-        Percorre o array do início ao fim.
+        Percorre do início ao fim.
         Complexidade: O(n) no pior caso.
         Retorna: (registro | None, iterações)
         """
@@ -76,7 +90,6 @@ def _fazer_busca_sequencial(arr: ArrayLinear, chaves: list) -> dict:
 
 
 def _fazer_busca_binaria(arr: ArrayLinear, chaves: list) -> dict:
-    # Mede ordenação separadamente
     inicio_ord = time.perf_counter()
     arr.ordenar()
     t_ord = time.perf_counter() - inicio_ord
@@ -107,7 +120,6 @@ def rodar_experimento(N: int, caminho: str) -> dict:
 
     registros_base = carregar_csv(caminho)
 
-    # Acumuladores
     ins  = {"tempo": [], "mem_trace": [], "mem_ram": [], "cpu_media": [], "cpu_pico": []}
     seq  = {"tempo": [], "iter_media": [], "mem_trace": [], "mem_ram": [], "cpu_media": [], "cpu_pico": []}
     bin_ = {"tempo": [], "t_ord": [], "iter_media": [],
@@ -116,7 +128,7 @@ def rodar_experimento(N: int, caminho: str) -> dict:
     for rodada in range(1, NUM_RODADAS + 1):
         chaves = [r["matricula"] for r in random.sample(registros_base, NUM_BUSCAS)]
 
-        # ── Inserção ──────────────────────────────────────────
+        # Inserção
         arr, m_ins = medir_bloco(_fazer_insercao, registros_base)
         ins["tempo"].append(m_ins["tempo_s"])
         ins["mem_trace"].append(m_ins["mem_trace_kb"])
@@ -124,7 +136,7 @@ def rodar_experimento(N: int, caminho: str) -> dict:
         ins["cpu_media"].append(m_ins["cpu_media_pct"])
         ins["cpu_pico"].append(m_ins["cpu_pico_pct"])
 
-        # ── Busca Sequencial ──────────────────────────────────
+        # Busca Sequencial
         dados_seq, m_seq = medir_bloco(_fazer_busca_sequencial, arr, chaves)
         seq["tempo"].append(m_seq["tempo_s"])
         seq["iter_media"].append(dados_seq["iter_media"])
@@ -133,7 +145,7 @@ def rodar_experimento(N: int, caminho: str) -> dict:
         seq["cpu_media"].append(m_seq["cpu_media_pct"])
         seq["cpu_pico"].append(m_seq["cpu_pico_pct"])
 
-        # ── Busca Binária (array fresco para não usar o já medido) ──
+        # Busca Binária
         arr2, _ = medir_bloco(_fazer_insercao, registros_base)
         dados_bin, m_bin = medir_bloco(_fazer_busca_binaria, arr2, chaves)
         bin_["tempo"].append(m_bin["tempo_s"])
@@ -145,63 +157,32 @@ def rodar_experimento(N: int, caminho: str) -> dict:
         bin_["cpu_pico"].append(m_bin["cpu_pico_pct"])
 
         print(f"\n  Rodada {rodada}:")
-        print(f"    [INS] tempo={m_ins['tempo_s']:.4f}s  "
-              f"mem_trace={m_ins['mem_trace_kb']:.1f}KB  "
-              f"ram_delta={m_ins['mem_ram_kb']:.1f}KB  "
-              f"cpu={m_ins['cpu_media_pct']:.1f}%")
-        print(f"    [SEQ] tempo={m_seq['tempo_s']:.4f}s  "
-              f"iter={dados_seq['iter_media']:.0f}  "
-              f"mem_trace={m_seq['mem_trace_kb']:.1f}KB  "
-              f"cpu={m_seq['cpu_media_pct']:.1f}%")
-        print(f"    [BIN] tempo={m_bin['tempo_s']:.4f}s  "
-              f"iter={dados_bin['iter_media']:.1f}  "
-              f"ord={dados_bin['t_ord_s']:.4f}s  "
-              f"mem_trace={m_bin['mem_trace_kb']:.1f}KB  "
-              f"cpu={m_bin['cpu_media_pct']:.1f}%")
-
-    # ── Resumo ────────────────────────────────────────────────
-    print(f"\n  {'─'*60}")
-    print(f"  RESUMO (média ± desvio padrão) — N={N:,}")
-    print(f"  {'─'*60}")
-
-    print("  [INSERÇÃO]")
-    resumo_print("Tempo (s)",            ins["tempo"])
-    resumo_print("Mem tracemalloc (KB)", ins["mem_trace"])
-    resumo_print("RAM delta (KB)",       ins["mem_ram"])
-    resumo_print("CPU média (%)",        ins["cpu_media"])
-    resumo_print("CPU pico (%)",         ins["cpu_pico"])
-
-    print("  [BUSCA SEQUENCIAL — O(n)]")
-    resumo_print("Tempo (s)",            seq["tempo"])
-    resumo_print("Iterações médias",     seq["iter_media"])
-    resumo_print("Mem tracemalloc (KB)", seq["mem_trace"])
-    resumo_print("RAM delta (KB)",       seq["mem_ram"])
-    resumo_print("CPU média (%)",        seq["cpu_media"])
-    resumo_print("CPU pico (%)",         seq["cpu_pico"])
-
-    print("  [BUSCA BINÁRIA — O(log n)]")
-    resumo_print("Tempo (s)",            bin_["tempo"])
-    resumo_print("Tempo ordenação (s)",  bin_["t_ord"])
-    resumo_print("Iterações médias",     bin_["iter_media"])
-    resumo_print("Mem tracemalloc (KB)", bin_["mem_trace"])
-    resumo_print("RAM delta (KB)",       bin_["mem_ram"])
-    resumo_print("CPU média (%)",        bin_["cpu_media"])
-    resumo_print("CPU pico (%)",         bin_["cpu_pico"])
+        print(f"    [Inserção]        Tempo={m_ins['tempo_s']:.4f}s  "
+              f"Mem={m_ins['mem_trace_kb']:.1f}KB  "
+              f"RAM={m_ins['mem_ram_kb']:.1f}KB  "
+              f"CPU={m_ins['cpu_media_pct']:.1f}%")
+        print(f"    [Busca Sequencial] Tempo={m_seq['tempo_s']:.4f}s  "
+              f"Comparações={dados_seq['iter_media']:.0f}  "
+              f"Mem={m_seq['mem_trace_kb']:.1f}KB  "
+              f"CPU={m_seq['cpu_media_pct']:.1f}%")
+        print(f"    [Busca Binária]   Tempo={m_bin['tempo_s']:.4f}s  "
+              f"Comparações={dados_bin['iter_media']:.1f}  "
+              f"Ordenação={dados_bin['t_ord_s']:.4f}s  "
+              f"Mem={m_bin['mem_trace_kb']:.1f}KB  "
+              f"CPU={m_bin['cpu_media_pct']:.1f}%")
 
     def med(lst): return statistics.mean(lst)
     def std(lst): return statistics.stdev(lst) if len(lst) > 1 else 0.0
 
-    return {
-        "estrutura": "Array Linear",
-        "N": N,
-        # Inserção
+    resultado = {
+        "estrutura":         "Array Linear",
+        "N":                 N,
         "ins_tempo_med":     med(ins["tempo"]),
         "ins_tempo_std":     std(ins["tempo"]),
         "ins_mem_trace_kb":  med(ins["mem_trace"]),
         "ins_mem_ram_kb":    med(ins["mem_ram"]),
         "ins_cpu_media_pct": med(ins["cpu_media"]),
         "ins_cpu_pico_pct":  med(ins["cpu_pico"]),
-        # Busca sequencial
         "seq_tempo_med":     med(seq["tempo"]),
         "seq_tempo_std":     std(seq["tempo"]),
         "seq_iter_med":      med(seq["iter_media"]),
@@ -210,7 +191,6 @@ def rodar_experimento(N: int, caminho: str) -> dict:
         "seq_mem_ram_kb":    med(seq["mem_ram"]),
         "seq_cpu_media_pct": med(seq["cpu_media"]),
         "seq_cpu_pico_pct":  med(seq["cpu_pico"]),
-        # Busca binária
         "bin_tempo_med":     med(bin_["tempo"]),
         "bin_tempo_std":     std(bin_["tempo"]),
         "bin_t_ord_med":     med(bin_["t_ord"]),
@@ -221,3 +201,11 @@ def rodar_experimento(N: int, caminho: str) -> dict:
         "bin_cpu_media_pct": med(bin_["cpu_media"]),
         "bin_cpu_pico_pct":  med(bin_["cpu_pico"]),
     }
+
+    # Imprime tabela final de resumo com nomes legíveis
+    imprimir_tabela(
+        f"RESUMO — Array Linear | N={N:,} (média de {NUM_RODADAS} rodadas)",
+        resultado
+    )
+
+    return resultado
