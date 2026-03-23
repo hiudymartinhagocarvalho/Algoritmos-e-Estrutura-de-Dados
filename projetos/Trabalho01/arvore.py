@@ -1,18 +1,3 @@
-"""
-arvores.py
-──────────
-Implementação de BST (sem balanceamento) e AVL (com balanceamento),
-com o mesmo padrão de métricas usado no array_linear.py.
-
-Métricas coletadas por operação:
-  - Tempo (s)
-  - Memória tracemalloc (KB)
-  - RAM delta psutil (KB)
-  - CPU média e pico (%)
-  - Iterações médias
-  - Altura da árvore (indicador de balanceamento)
-"""
-
 import random
 import statistics
 

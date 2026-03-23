@@ -1,14 +1,3 @@
-"""
-monitor.py
-──────────
-Utilitários compartilhados de coleta de métricas:
-  - MonitorCPU  : coleta CPU% em thread de background (psutil)
-  - medir_bloco : context-manager que envolve qualquer operação e
-                  retorna dict com tempo, memória e CPU.
-  - carregar_csv: leitura genérica de CSV para lista de dicts.
-  - resumo_print: imprime média ± desvio padrão formatado.
-"""
-
 import csv
 import os
 import statistics

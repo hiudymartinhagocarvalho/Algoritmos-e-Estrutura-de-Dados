@@ -1,17 +1,3 @@
-"""
-array_linear.py
-───────────────
-Implementação do Array Linear e seu experimento comparativo entre
-busca sequencial O(n) e busca binária O(log n).
-
-Métricas coletadas por operação:
-  - Tempo (s)
-  - Memória tracemalloc (KB)
-  - RAM delta psutil (KB)
-  - CPU média e pico (%)
-  - Iterações médias
-"""
-
 import random
 import statistics
 import time

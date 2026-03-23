@@ -1,19 +1,3 @@
-"""
-main.py
-───────
-Ponto de entrada único. Executa todos os experimentos em ordem:
-  1. Array Linear  (busca sequencial + binária)
-  2. BST           (sem balanceamento)
-  3. AVL           (com balanceamento)
-
-Salva os resultados em:
-  - resultados_array.csv
-  - resultados_arvores.csv
-
-Requisitos:
-  pip install psutil
-"""
-
 import os
 import sys
 
