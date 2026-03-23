@@ -35,7 +35,7 @@ from hash         import rodar_experimento as exp_hash
 # CONFIGURAÇÃO DOS VOLUMES
 # ─────────────────────────────────────────────
 
-_BASE = os.path.join(os.path.dirname(__file__), "..", "..")
+_BASE = os.path.dirname(__file__)
 ARQUIVOS = {
     10_000:  os.path.join(_BASE, "datasets", "dados_10000.csv"),
     50_000:  os.path.join(_BASE, "datasets", "dados_50000.csv"),
