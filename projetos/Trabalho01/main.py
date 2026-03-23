@@ -1,3 +1,19 @@
+"""
+main.py
+───────
+Ponto de entrada único. Executa todos os experimentos em ordem:
+  1. Array Linear  (busca sequencial + binária)
+  2. BST           (sem balanceamento)
+  3. AVL           (com balanceamento)
+
+Salva os resultados em:
+  - resultados_array.csv
+  - resultados_arvores.csv
+
+Requisitos:
+  pip install psutil
+"""
+
 import os
 import sys
 
@@ -11,7 +27,8 @@ except ImportError:
 
 from monitor      import salvar_csv
 from array_linear import rodar_experimento as exp_array
-from arvore      import rodar_experimento as exp_arvore
+from arvore       import rodar_experimento as exp_arvore
+from hash         import rodar_experimento as exp_hash
 
 
 # ─────────────────────────────────────────────
@@ -33,6 +50,7 @@ ARQUIVOS = {
 def main():
     res_array   = []
     res_arvores = []
+    res_hash    = []
 
     for N, caminho in ARQUIVOS.items():
         if not os.path.exists(caminho):
@@ -48,6 +66,9 @@ def main():
         # ── 3. AVL (com balanceamento) ────────────────────────
         res_arvores.append(exp_arvore(N, caminho, usar_avl=True))
 
+        # ── 4. Tabela Hash (3 funções × 3 valores de M) ───────
+        res_hash.extend(exp_hash(N, caminho))
+
     # ── Salva CSVs ────────────────────────────────────────────
     if res_array:
         salvar_csv("resultados_array.csv", res_array)
@@ -56,6 +77,10 @@ def main():
     if res_arvores:
         salvar_csv("resultados_arvores.csv", res_arvores)
         print("Resultados salvos em: resultados_arvores.csv")
+
+    if res_hash:
+        salvar_csv("resultados_hash.csv", res_hash)
+        print("Resultados salvos em: resultados_hash.csv")
 
     print("\n✓ Experimento concluído!")
 

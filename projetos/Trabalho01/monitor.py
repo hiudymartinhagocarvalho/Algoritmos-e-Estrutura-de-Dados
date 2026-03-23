@@ -137,6 +137,40 @@ def medir_bloco(fn, *args, **kwargs) -> tuple:
     }
 
 
+def medir_bloco_repetido(fn, repeticoes: int, *args, **kwargs) -> tuple:
+    """
+    Executa fn(*args, **kwargs) 'repeticoes' vezes dentro de um único
+    bloco de medição de tempo, memória e CPU.
+    Retorna: (resultado_da_ultima_chamada, dict_de_metricas)
+    """
+    processo  = psutil.Process(os.getpid())
+    ram_antes = processo.memory_info().rss / 1024
+
+    monitor = MonitorCPU()
+    tracemalloc.start()
+    monitor.iniciar()
+    inicio = time.perf_counter()
+
+    resultado = None
+    for _ in range(repeticoes):
+        resultado = fn(*args, **kwargs)
+
+    fim = time.perf_counter()
+    _, pico_trace = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    cpu_media, cpu_pico = monitor.parar()
+
+    ram_depois = processo.memory_info().rss / 1024
+
+    return resultado, {
+        "tempo_s":       fim - inicio,
+        "mem_trace_kb":  pico_trace / 1024,
+        "mem_ram_kb":    ram_depois - ram_antes,
+        "cpu_media_pct": cpu_media,
+        "cpu_pico_pct":  cpu_pico,
+    }
+
+
 # ─────────────────────────────────────────────
 # IMPRESSÃO DE TABELA LEGÍVEL
 # ─────────────────────────────────────────────
