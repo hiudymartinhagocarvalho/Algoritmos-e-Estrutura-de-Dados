@@ -1,13 +1,26 @@
-import csv
-import time
-import tracemalloc
-import statistics
+"""
+arvores.py
+──────────
+Implementação de BST (sem balanceamento) e AVL (com balanceamento),
+com o mesmo padrão de métricas usado no array_linear.py.
+
+Métricas coletadas por operação:
+  - Tempo (s)
+  - Memória tracemalloc (KB)
+  - RAM delta psutil (KB)
+  - CPU média e pico (%)
+  - Iterações médias
+  - Altura da árvore (indicador de balanceamento)
+"""
+
 import random
-import os
+import statistics
+
+from monitor import carregar_csv, medir_bloco, resumo_print
 
 
 # ─────────────────────────────────────────────
-# BST — ÁRVORE BINÁRIA DE BUSCA (SEM BALANCEAMENTO)
+# BST — SEM BALANCEAMENTO
 # ─────────────────────────────────────────────
 
 class NoBST:
@@ -37,14 +50,10 @@ class BST:
             no.esq = self._inserir(no.esq, registro)
         elif chave > no.registro["matricula"]:
             no.dir = self._inserir(no.dir, registro)
-        # chave duplicada: ignora
-        return no
+        return no  # duplicata ignorada
 
-    def buscar(self, matricula: str):
-        """
-        Busca binária na árvore.
-        Retorna: (registro | None, iterações)
-        """
+    def buscar(self, matricula: str) -> tuple:
+        """Retorna (registro | None, iterações)."""
         return self._buscar(self.raiz, matricula, 0)
 
     def _buscar(self, no, matricula, iteracoes):
@@ -58,17 +67,17 @@ class BST:
         else:
             return self._buscar(no.dir, matricula, iteracoes)
 
-    def altura(self):
+    def altura(self) -> int:
         return self._altura(self.raiz)
 
-    def _altura(self, no):
+    def _altura(self, no) -> int:
         if no is None:
             return 0
         return 1 + max(self._altura(no.esq), self._altura(no.dir))
 
 
 # ─────────────────────────────────────────────
-# AVL — BST COM BALANCEAMENTO AUTOMÁTICO
+# AVL — COM BALANCEAMENTO AUTOMÁTICO
 # ─────────────────────────────────────────────
 
 class NoAVL:
@@ -76,78 +85,53 @@ class NoAVL:
         self.registro = registro
         self.esq = None
         self.dir = None
-        self.altura = 1  # altura do nó na árvore
+        self.altura = 1
 
 
 class AVL:
     """
-    Árvore AVL: mantém |FB| <= 1 em todos os nós via rotações.
+    Árvore AVL: mantém |FB| <= 1 via rotações.
     Inserção e busca garantidas em O(log n) no pior caso.
     """
 
     def __init__(self):
         self.raiz = None
 
-    # ── utilidades de altura e fator de balanceamento ──
-
-    def _altura(self, no):
+    def _alt(self, no) -> int:
         return no.altura if no else 0
 
-    def _fb(self, no):
-        """Fator de Balanceamento = altura(esq) - altura(dir)."""
-        return self._altura(no.esq) - self._altura(no.dir) if no else 0
+    def _fb(self, no) -> int:
+        return self._alt(no.esq) - self._alt(no.dir) if no else 0
 
-    def _atualizar_altura(self, no):
-        no.altura = 1 + max(self._altura(no.esq), self._altura(no.dir))
+    def _upd(self, no):
+        no.altura = 1 + max(self._alt(no.esq), self._alt(no.dir))
 
-    # ── rotações ──
-
-    def _rot_direita(self, y):
-        """Rotação simples à direita."""
-        x  = y.esq
-        T2 = x.dir
-        x.dir = y
-        y.esq = T2
-        self._atualizar_altura(y)
-        self._atualizar_altura(x)
+    def _rot_dir(self, y):
+        x = y.esq; T2 = x.dir
+        x.dir = y; y.esq = T2
+        self._upd(y); self._upd(x)
         return x
 
-    def _rot_esquerda(self, x):
-        """Rotação simples à esquerda."""
-        y  = x.dir
-        T2 = y.esq
-        y.esq = x
-        x.dir = T2
-        self._atualizar_altura(x)
-        self._atualizar_altura(y)
+    def _rot_esq(self, x):
+        y = x.dir; T2 = y.esq
+        y.esq = x; x.dir = T2
+        self._upd(x); self._upd(y)
         return y
 
     def _balancear(self, no):
-        """Aplica rotação adequada se o nó estiver desbalanceado."""
-        self._atualizar_altura(no)
+        self._upd(no)
         fb = self._fb(no)
-
-        # Caso Esquerda-Esquerda
-        if fb > 1 and self._fb(no.esq) >= 0:
-            return self._rot_direita(no)
-
-        # Caso Esquerda-Direita
-        if fb > 1 and self._fb(no.esq) < 0:
-            no.esq = self._rot_esquerda(no.esq)
-            return self._rot_direita(no)
-
-        # Caso Direita-Direita
-        if fb < -1 and self._fb(no.dir) <= 0:
-            return self._rot_esquerda(no)
-
-        # Caso Direita-Esquerda
-        if fb < -1 and self._fb(no.dir) > 0:
-            no.dir = self._rot_direita(no.dir)
-            return self._rot_esquerda(no)
-
+        if fb > 1 and self._fb(no.esq) >= 0:        # EE
+            return self._rot_dir(no)
+        if fb > 1 and self._fb(no.esq) < 0:         # ED
+            no.esq = self._rot_esq(no.esq)
+            return self._rot_dir(no)
+        if fb < -1 and self._fb(no.dir) <= 0:       # DD
+            return self._rot_esq(no)
+        if fb < -1 and self._fb(no.dir) > 0:        # DE
+            no.dir = self._rot_dir(no.dir)
+            return self._rot_esq(no)
         return no
-
-    # ── inserção ──
 
     def inserir(self, registro: dict):
         self.raiz = self._inserir(self.raiz, registro)
@@ -164,9 +148,8 @@ class AVL:
             return no  # duplicata ignorada
         return self._balancear(no)
 
-    # ── busca (idêntica à BST) ──
-
-    def buscar(self, matricula: str):
+    def buscar(self, matricula: str) -> tuple:
+        """Retorna (registro | None, iterações)."""
         return self._buscar(self.raiz, matricula, 0)
 
     def _buscar(self, no, matricula, iteracoes):
@@ -180,160 +163,129 @@ class AVL:
         else:
             return self._buscar(no.dir, matricula, iteracoes)
 
-    def altura(self):
-        return self._altura(self.raiz)
+    def altura(self) -> int:
+        return self._alt(self.raiz)
 
 
 # ─────────────────────────────────────────────
-# LEITURA DO CSV
+# FUNÇÕES DE MEDIÇÃO
 # ─────────────────────────────────────────────
 
-def carregar_csv(caminho: str) -> list:
-    registros = []
-    with open(caminho, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            registros.append(row)
-    return registros
-
-
-# ─────────────────────────────────────────────
-# COLETA DE MÉTRICAS
-# ─────────────────────────────────────────────
-
-def medir_insercao(registros: list, usar_avl: bool):
-    """Insere todos os registros na árvore escolhida e coleta métricas."""
-    tracemalloc.start()
-    inicio = time.perf_counter()
-
+def _fazer_insercao(registros: list, usar_avl: bool):
     arvore = AVL() if usar_avl else BST()
     for r in registros:
         arvore.inserir(r)
-
-    fim = time.perf_counter()
-    _, pico = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    return arvore, fim - inicio, pico / 1024
+    return arvore
 
 
-def medir_busca(arvore, chaves: list):
-    """Executa buscas e coleta tempo, iterações e memória."""
-    tracemalloc.start()
-    inicio = time.perf_counter()
-
+def _fazer_busca(arvore, chaves: list) -> dict:
     iteracoes_lista = []
     for ch in chaves:
         _, it = arvore.buscar(ch)
         iteracoes_lista.append(it)
-
-    fim = time.perf_counter()
-    _, pico = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    return fim - inicio, statistics.mean(iteracoes_lista), pico / 1024
+    return {
+        "iter_media": statistics.mean(iteracoes_lista),
+        "iter_std":   statistics.stdev(iteracoes_lista) if len(iteracoes_lista) > 1 else 0,
+    }
 
 
 # ─────────────────────────────────────────────
-# EXPERIMENTO: 5 RODADAS POR VOLUME E TIPO
+# EXPERIMENTO
 # ─────────────────────────────────────────────
 
 NUM_RODADAS = 5
 NUM_BUSCAS  = 100
 
-_BASE = os.path.join(os.path.dirname(__file__), "..", "..")
-ARQUIVOS = {
-    10_000:  os.path.join(_BASE, "datasets", "dados_10000.csv"),
-    50_000:  os.path.join(_BASE, "datasets", "dados_50000.csv"),
-    100_000: os.path.join(_BASE, "datasets", "dados_100000.csv"),
-}
 
-
-def rodar_experimento(N: int, caminho: str, usar_avl: bool):
+def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
     nome = "AVL (com balanceamento)" if usar_avl else "BST (sem balanceamento)"
-    print(f"\n{'─'*60}")
+    print(f"\n{'═'*65}")
     print(f"  {nome} | N = {N:,}")
-    print(f"{'─'*60}")
+    print(f"{'═'*65}")
 
     registros_base = carregar_csv(caminho)
 
-    t_ins_list, m_ins_list, altura_list = [], [], []
-    t_bus_list, it_list = [], []
+    ins  = {"tempo": [], "mem_trace": [], "mem_ram": [],
+            "cpu_media": [], "cpu_pico": [], "altura": []}
+    bus  = {"tempo": [], "iter_media": [], "mem_trace": [],
+            "mem_ram": [], "cpu_media": [], "cpu_pico": []}
 
     for rodada in range(1, NUM_RODADAS + 1):
         chaves = [r["matricula"] for r in random.sample(registros_base, NUM_BUSCAS)]
 
-        # Inserção
-        arvore, t_ins, m_ins = medir_insercao(registros_base, usar_avl)
+        # ── Inserção ──────────────────────────────────────────
+        arvore, m_ins = medir_bloco(_fazer_insercao, registros_base, usar_avl)
         h = arvore.altura()
-        t_ins_list.append(t_ins)
-        m_ins_list.append(m_ins)
-        altura_list.append(h)
+        ins["tempo"].append(m_ins["tempo_s"])
+        ins["mem_trace"].append(m_ins["mem_trace_kb"])
+        ins["mem_ram"].append(m_ins["mem_ram_kb"])
+        ins["cpu_media"].append(m_ins["cpu_media_pct"])
+        ins["cpu_pico"].append(m_ins["cpu_pico_pct"])
+        ins["altura"].append(h)
 
-        # Busca
-        t_bus, media_it, _ = medir_busca(arvore, chaves)
-        t_bus_list.append(t_bus)
-        it_list.append(media_it)
+        # ── Busca ─────────────────────────────────────────────
+        dados_bus, m_bus = medir_bloco(_fazer_busca, arvore, chaves)
+        bus["tempo"].append(m_bus["tempo_s"])
+        bus["iter_media"].append(dados_bus["iter_media"])
+        bus["mem_trace"].append(m_bus["mem_trace_kb"])
+        bus["mem_ram"].append(m_bus["mem_ram_kb"])
+        bus["cpu_media"].append(m_bus["cpu_media_pct"])
+        bus["cpu_pico"].append(m_bus["cpu_pico_pct"])
 
-        print(f"  Rodada {rodada}: ins={t_ins:.4f}s | mem={m_ins:.1f}KB | "
-              f"altura={h} | busca={t_bus:.4f}s | iter={media_it:.1f}")
+        print(f"\n  Rodada {rodada}:")
+        print(f"    [INS] tempo={m_ins['tempo_s']:.4f}s  "
+              f"mem_trace={m_ins['mem_trace_kb']:.1f}KB  "
+              f"ram_delta={m_ins['mem_ram_kb']:.1f}KB  "
+              f"cpu={m_ins['cpu_media_pct']:.1f}%  "
+              f"altura={h}")
+        print(f"    [BUS] tempo={m_bus['tempo_s']:.4f}s  "
+              f"iter={dados_bus['iter_media']:.1f}  "
+              f"mem_trace={m_bus['mem_trace_kb']:.1f}KB  "
+              f"cpu={m_bus['cpu_media_pct']:.1f}%")
 
-    print(f"\n  RESUMO (média ± desvio padrão):")
-    print(f"  Inserção  : {statistics.mean(t_ins_list):.4f}s ± {statistics.stdev(t_ins_list):.4f}s")
-    print(f"  Memória   : {statistics.mean(m_ins_list):.1f}KB ± {statistics.stdev(m_ins_list):.1f}KB")
-    print(f"  Altura    : {statistics.mean(altura_list):.1f} ± {statistics.stdev(altura_list):.1f}")
-    print(f"  Busca     : {statistics.mean(t_bus_list):.4f}s ± {statistics.stdev(t_bus_list):.4f}s")
-    print(f"  Iterações : {statistics.mean(it_list):.1f} ± {statistics.stdev(it_list):.1f}")
+    # ── Resumo ────────────────────────────────────────────────
+    print(f"\n  {'─'*60}")
+    print(f"  RESUMO (média ± desvio padrão) — {nome} | N={N:,}")
+    print(f"  {'─'*60}")
+
+    print("  [INSERÇÃO]")
+    resumo_print("Tempo (s)",            ins["tempo"])
+    resumo_print("Mem tracemalloc (KB)", ins["mem_trace"])
+    resumo_print("RAM delta (KB)",       ins["mem_ram"])
+    resumo_print("CPU média (%)",        ins["cpu_media"])
+    resumo_print("CPU pico (%)",         ins["cpu_pico"])
+    resumo_print("Altura da árvore",     ins["altura"], fmt=".1f")
+
+    print(f"  [BUSCA — O(log n)]")
+    resumo_print("Tempo (s)",            bus["tempo"])
+    resumo_print("Iterações médias",     bus["iter_media"])
+    resumo_print("Mem tracemalloc (KB)", bus["mem_trace"])
+    resumo_print("RAM delta (KB)",       bus["mem_ram"])
+    resumo_print("CPU média (%)",        bus["cpu_media"])
+    resumo_print("CPU pico (%)",         bus["cpu_pico"])
+
+    def med(lst): return statistics.mean(lst)
+    def std(lst): return statistics.stdev(lst) if len(lst) > 1 else 0.0
 
     return {
-        "estrutura":   nome,
-        "N":           N,
-        "t_ins_media": statistics.mean(t_ins_list),
-        "t_ins_std":   statistics.stdev(t_ins_list),
-        "mem_ins_kb":  statistics.mean(m_ins_list),
-        "mem_ins_std": statistics.stdev(m_ins_list),
-        "altura_media":statistics.mean(altura_list),
-        "altura_std":  statistics.stdev(altura_list),
-        "t_bus_media": statistics.mean(t_bus_list),
-        "t_bus_std":   statistics.stdev(t_bus_list),
-        "iter_media":  statistics.mean(it_list),
-        "iter_std":    statistics.stdev(it_list),
+        "estrutura":         nome,
+        "N":                 N,
+        # Inserção
+        "ins_tempo_med":     med(ins["tempo"]),
+        "ins_tempo_std":     std(ins["tempo"]),
+        "ins_mem_trace_kb":  med(ins["mem_trace"]),
+        "ins_mem_ram_kb":    med(ins["mem_ram"]),
+        "ins_cpu_media_pct": med(ins["cpu_media"]),
+        "ins_cpu_pico_pct":  med(ins["cpu_pico"]),
+        "altura_media":      med(ins["altura"]),
+        "altura_std":        std(ins["altura"]),
+        # Busca
+        "bus_tempo_med":     med(bus["tempo"]),
+        "bus_tempo_std":     std(bus["tempo"]),
+        "bus_iter_med":      med(bus["iter_media"]),
+        "bus_iter_std":      std(bus["iter_media"]),
+        "bus_mem_trace_kb":  med(bus["mem_trace"]),
+        "bus_mem_ram_kb":    med(bus["mem_ram"]),
+        "bus_cpu_media_pct": med(bus["cpu_media"]),
+        "bus_cpu_pico_pct":  med(bus["cpu_pico"]),
     }
-
-
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
-
-if __name__ == "__main__":
-    resultados = []
-
-    for N, caminho in ARQUIVOS.items():
-        if not os.path.exists(caminho):
-            print(f"[AVISO] Arquivo não encontrado: {caminho}")
-            continue
-
-        # BST sem balanceamento
-        res_bst = rodar_experimento(N, caminho, usar_avl=False)
-        resultados.append(res_bst)
-
-        # AVL com balanceamento
-        res_avl = rodar_experimento(N, caminho, usar_avl=True)
-        resultados.append(res_avl)
-
-    # Salva CSV com todos os resultados
-    campos = [
-        "estrutura", "N",
-        "t_ins_media", "t_ins_std",
-        "mem_ins_kb",  "mem_ins_std",
-        "altura_media","altura_std",
-        "t_bus_media", "t_bus_std",
-        "iter_media",  "iter_std",
-    ]
-    with open("resultados_arvores.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=campos)
-        writer.writeheader()
-        writer.writerows(resultados)
-
-    print("\n\nResultados salvos em: resultados_arvores.csv")
-    print("Experimento concluído!")

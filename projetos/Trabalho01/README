@@ -1,0 +1,140 @@
+# Análise Comparativa de Estruturas de Dados
+
+Trabalho 01 — Fundamentos de Algoritmos e Estrutura de Dados  
+Programa de Pós-Graduação em Informática Aplicada — PUCPR  
+Prof. André Gustavo Hochuli
+
+---
+
+## Objetivo
+
+Comparar o desempenho de diferentes estruturas de dados em operações de **inserção** e **busca**, avaliando múltiplas métricas de desempenho para diferentes volumes de dados.
+
+As estruturas implementadas são:
+
+- **Array Linear** — busca sequencial O(n) e busca binária O(log n)
+- **BST** — Árvore Binária de Busca sem balanceamento
+- **AVL** — Árvore Binária de Busca com balanceamento automático
+- **Tabela Hash** — três funções hash distintas com tratamento de colisões *(em desenvolvimento)*
+
+---
+
+## Estrutura do Projeto
+
+```
+📦 Trabalho01/
+├── main.py            # Ponto de entrada — executa todos os experimentos
+├── monitor.py         # Utilitários de métricas (CPU, memória, tempo)
+├── array_linear.py    # Implementação e experimento do Array Linear
+├── arvores.py         # Implementação e experimento de BST e AVL
+├── hash_table.py      # Implementação e experimento da Tabela Hash (em breve)
+│
+├── datasets/
+│   ├── dados_10000.csv
+│   ├── dados_50000.csv
+│   └── dados_100000.csv
+│
+└── resultados/
+    ├── resultados_array.csv
+    └── resultados_arvores.csv
+```
+
+---
+
+## Métricas Coletadas
+
+Cada operação (inserção e busca) é medida com as seguintes métricas:
+
+| Métrica | Ferramenta |
+|---|---|
+| Tempo de execução (s) | `time.perf_counter` |
+| Memória alocada (KB) | `tracemalloc` |
+| RAM do processo — delta (KB) | `psutil` |
+| Uso médio de CPU (%) | `psutil` + thread de background |
+| Pico de CPU (%) | `psutil` + thread de background |
+| Iterações médias por busca | contagem interna |
+| Altura da árvore | BST / AVL apenas |
+
+Cada cenário é executado em **5 rodadas independentes**, com média e desvio padrão reportados.
+
+---
+
+## Requisitos
+
+- Python 3.10+
+- [psutil](https://pypi.org/project/psutil/)
+
+Instale as dependências:
+
+```bash
+pip install psutil
+```
+
+---
+
+## Como Executar
+
+Clone o repositório e entre na pasta do projeto:
+
+```bash
+git clone https://github.com/seu-usuario/seu-repositorio.git
+cd seu-repositorio/projetos/Trabalho01
+```
+
+Execute todos os experimentos de uma vez:
+
+```bash
+py main.py
+```
+
+Os resultados serão salvos automaticamente em:
+
+```
+resultados_array.csv
+resultados_arvores.csv
+```
+
+---
+
+## Volumes de Dados Testados
+
+```
+N = 10.000 | 50.000 | 100.000
+```
+
+Cada registro contém: `matricula` (9 dígitos), `nome`, `salario`, `codigo_setor`.
+
+---
+
+## Complexidade Assintótica (Big-O)
+
+| Estrutura | Inserção | Busca (médio) | Busca (pior caso) |
+|---|---|---|---|
+| Array Linear (sequencial) | O(1) | O(n) | O(n) |
+| Array Linear (binária) | O(1) + O(n log n) ord. | O(log n) | O(log n) |
+| BST | O(log n) | O(log n) | O(n) |
+| AVL | O(log n) | O(log n) | O(log n) |
+| Tabela Hash | O(1) | O(1) | O(n) |
+
+---
+
+## Resultados Esperados
+
+A BST sem balanceamento pode degenerar para O(n) quando os dados são inseridos em ordem crescente ou decrescente, comportando-se como uma lista ligada. A AVL evita esse problema mantendo a altura mínima via rotações, garantindo O(log n) mesmo no pior caso.
+
+O array com busca sequencial serve como baseline de comparação: simples de implementar, porém O(n) na busca. A busca binária melhora isso para O(log n), mas exige ordenação prévia.
+
+---
+
+## Autores
+
+| Nome |
+|Hiudy Martinhago Carvalho|
+|Henrique Zan Grande|
+|Rafael Vargas|
+
+---
+
+## Licença
+
+Projeto acadêmico — PUCPR 2025.
