@@ -8,7 +8,7 @@ random.seed(SEED)
 OUTPUT_DIR = Path("datasets")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-TAMANHOS = [10_000, 50_000, 100_000]
+TAMANHOS = [100_000,250_000, 500_000,750_000, 1_000_000, 5_000_000, 10_000_000]
 
 NOMES = [
     "Ana", "Bruno", "Carlos", "Daniela", "Eduardo", "Fernanda", "Gabriel",
