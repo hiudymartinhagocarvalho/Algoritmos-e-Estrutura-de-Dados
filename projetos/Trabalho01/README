@@ -118,11 +118,32 @@ Cada registro contém: `matricula` (9 dígitos), `nome`, `salario`, `codigo_seto
 
 ---
 
+## Detalhes da Tabela Hash
+
+A implementação da Tabela Hash utiliza o método de **Encadeamento Separado** para resolução de colisões. O experimento avalia o impacto do Fator de Carga ($\lambda = N/M$) utilizando três tamanhos de tabela base ($M \in \{100, 1000, 5000\}$) com as seguintes funções de hash:
+
+1. **Método da Divisão**: 
+   Aplica a operação de módulo simples.
+   $h(k) = k \bmod M$
+
+2. **Método da Multiplicação (Razão Áurea)**:
+   Utiliza a constante de Knuth ($A \approx 0.6180339887$) para melhorar a dispersão em chaves sequenciais.
+   $h(k) = \lfloor M \cdot ((k \cdot A) \bmod 1) \rfloor$
+
+3. **Método do Meio-Quadrado (Mid-Square)**:
+   Eleva a chave de matrícula ao quadrado e extrai os dígitos centrais, aplicando o módulo em seguida. É uma boa técnica de dispersão, mas dependente do formato da chave.
+
+Métricas adicionais específicas coletadas para a Tabela Hash incluem o Fator de Carga ($\lambda$) e o número total de colisões durante a inserção.
+
+---
+
 ## Resultados Esperados
 
 A BST sem balanceamento pode degenerar para O(n) quando os dados são inseridos em ordem crescente ou decrescente, comportando-se como uma lista ligada. A AVL evita esse problema mantendo a altura mínima via rotações, garantindo O(log n) mesmo no pior caso.
 
 O array com busca sequencial serve como baseline de comparação: simples de implementar, porém O(n) na busca. A busca binária melhora isso para O(log n), mas exige ordenação prévia.
+
+Para a Tabela Hash, espera-se uma complexidade O(1) para inserção e busca no caso médio. No entanto, dependendo do tamanho da tabela ($M$) e da eficiência da função hash escolhida para o conjunto de dados, o Fator de Carga pode aumentar drasticamente. Em cenários de alta colisão, o Encadeamento Separado faz com que a busca degenere para O(n), assemelhando-se a uma busca sequencial em listas ligadas dentro dos índices sobrecarregados. O método da Multiplicação com a Razão Áurea deve apresentar uma distribuição de chaves mais uniforme em comparação com o Método da Divisão simples.
 
 ---
 
@@ -131,4 +152,4 @@ O array com busca sequencial serve como baseline de comparação: simples de imp
 | Nome |
 |Henrique Zan Grande|
 |Hiudy Martinhago Carvalho|
-|Rafael Vargas|
+|Rafael Vargas Serenato|
