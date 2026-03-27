@@ -74,7 +74,7 @@ def _fazer_busca_binaria(arr: ArrayLinear, chaves: list) -> dict:
 
 
 NUM_RODADAS = 5
-NUM_BUSCAS  = 50000
+NUM_BUSCAS  = 10000
 
 
 def rodar_experimento(N: int, caminho: str) -> dict:
