@@ -24,17 +24,20 @@ class BST:
     def __init__(self):
         self.raiz = None
 
-    def inserir(self, registro: dict):
-        self.raiz = self._inserir(self.raiz, registro)
+    def inserir(self, registro: dict) -> int:
+        cnt = [0]
+        self.raiz = self._inserir(self.raiz, registro, cnt)
+        return cnt[0]
 
-    def _inserir(self, no, registro):
+    def _inserir(self, no, registro, cnt):
+        cnt[0] += 1
         if no is None:
             return NoBST(registro)
         chave = registro["matricula"]
         if chave < no.registro["matricula"]:
-            no.esq = self._inserir(no.esq, registro)
+            no.esq = self._inserir(no.esq, registro, cnt)
         elif chave > no.registro["matricula"]:
-            no.dir = self._inserir(no.dir, registro)
+            no.dir = self._inserir(no.dir, registro, cnt)
         return no  # duplicata ignorada
 
     def buscar(self, matricula: str) -> tuple:
@@ -118,17 +121,20 @@ class AVL:
             return self._rot_esq(no)
         return no
 
-    def inserir(self, registro: dict):
-        self.raiz = self._inserir(self.raiz, registro)
+    def inserir(self, registro: dict) -> int:
+        cnt = [0]
+        self.raiz = self._inserir(self.raiz, registro, cnt)
+        return cnt[0]
 
-    def _inserir(self, no, registro):
+    def _inserir(self, no, registro, cnt):
+        cnt[0] += 1
         if no is None:
             return NoAVL(registro)
         chave = registro["matricula"]
         if chave < no.registro["matricula"]:
-            no.esq = self._inserir(no.esq, registro)
+            no.esq = self._inserir(no.esq, registro, cnt)
         elif chave > no.registro["matricula"]:
-            no.dir = self._inserir(no.dir, registro)
+            no.dir = self._inserir(no.dir, registro, cnt)
         else:
             return no  # duplicata ignorada
         return self._balancear(no)
@@ -158,9 +164,11 @@ class AVL:
 
 def _fazer_insercao(registros: list, usar_avl: bool):
     arvore = AVL() if usar_avl else BST()
+    total = 0
     for r in registros:
-        arvore.inserir(r)
-    return arvore
+        total += arvore.inserir(r)
+    iter_media = total / len(registros) if registros else 0.0
+    return arvore, iter_media
 
 
 def _fazer_busca(arvore, chaves: list) -> dict:
@@ -190,7 +198,7 @@ def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
 
     registros_base = carregar_csv(caminho)
 
-    ins  = {"tempo": [], "mem_trace": [], "mem_ram": [],
+    ins  = {"tempo": [], "iter_media": [], "mem_trace": [], "mem_ram": [],
             "cpu_media": [], "cpu_pico": [], "altura": []}
     bus  = {"tempo": [], "iter_media": [], "mem_trace": [],
             "mem_ram": [], "cpu_media": [], "cpu_pico": []}
@@ -199,9 +207,10 @@ def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
         chaves = [r["matricula"] for r in random.sample(registros_base, NUM_BUSCAS)]
 
         # ── Inserção ──────────────────────────────────────────
-        arvore, m_ins = medir_bloco(_fazer_insercao, registros_base, usar_avl)
+        (arvore, ins_it), m_ins = medir_bloco(_fazer_insercao, registros_base, usar_avl)
         h = arvore.altura()
         ins["tempo"].append(m_ins["tempo_s"])
+        ins["iter_media"].append(ins_it)
         ins["mem_trace"].append(m_ins["mem_trace_kb"])
         ins["mem_ram"].append(m_ins["mem_ram_kb"])
         ins["cpu_media"].append(m_ins["cpu_media_pct"])
@@ -218,15 +227,8 @@ def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
         bus["cpu_pico"].append(m_bus["cpu_pico_pct"])
 
         print(f"\n  Rodada {rodada}:")
-        print(f"    [INS] tempo={m_ins['tempo_s']:.4f}s  "
-              f"mem_trace={m_ins['mem_trace_kb']:.1f}KB  "
-              f"ram_delta={m_ins['mem_ram_kb']:.1f}KB  "
-              f"cpu={m_ins['cpu_media_pct']:.1f}%  "
-              f"altura={h}")
-        print(f"    [BUS] tempo={m_bus['tempo_s']:.4f}s  "
-              f"iter={dados_bus['iter_media']:.1f}  "
-              f"mem_trace={m_bus['mem_trace_kb']:.1f}KB  "
-              f"cpu={m_bus['cpu_media_pct']:.1f}%")
+        print(f"    [INS] tempo={m_ins['tempo_s']:.4f}s  iter={ins_it:.1f}  mem={m_ins['mem_trace_kb']:.1f}KB  cpu={m_ins['cpu_media_pct']:.1f}%  altura={h}")
+        print(f"    [BUS] tempo={m_bus['tempo_s']:.4f}s  iter={dados_bus['iter_media']:.1f}  mem={m_bus['mem_trace_kb']:.1f}KB  cpu={m_bus['cpu_media_pct']:.1f}%")
 
     # ── Resumo ────────────────────────────────────────────────
     print(f"\n  {'─'*60}")
@@ -234,20 +236,17 @@ def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
     print(f"  {'─'*60}")
 
     print("  [INSERÇÃO]")
-    resumo_print("Tempo (s)",            ins["tempo"])
-    resumo_print("Mem tracemalloc (KB)", ins["mem_trace"])
-    resumo_print("RAM delta (KB)",       ins["mem_ram"])
-    resumo_print("CPU média (%)",        ins["cpu_media"])
-    resumo_print("CPU pico (%)",         ins["cpu_pico"])
-    resumo_print("Altura da árvore",     ins["altura"], fmt=".1f")
+    resumo_print("Tempo (s)",        ins["tempo"])
+    resumo_print("Iterações",        ins["iter_media"])
+    resumo_print("Memória (KB)",     ins["mem_trace"])
+    resumo_print("CPU (%)",          ins["cpu_media"])
+    resumo_print("Altura da árvore", ins["altura"], fmt=".1f")
 
     print(f"  [BUSCA — O(log n)]")
-    resumo_print("Tempo (s)",            bus["tempo"])
-    resumo_print("Iterações médias",     bus["iter_media"])
-    resumo_print("Mem tracemalloc (KB)", bus["mem_trace"])
-    resumo_print("RAM delta (KB)",       bus["mem_ram"])
-    resumo_print("CPU média (%)",        bus["cpu_media"])
-    resumo_print("CPU pico (%)",         bus["cpu_pico"])
+    resumo_print("Tempo (s)",    bus["tempo"])
+    resumo_print("Iterações",    bus["iter_media"])
+    resumo_print("Memória (KB)", bus["mem_trace"])
+    resumo_print("CPU (%)",      bus["cpu_media"])
 
     def med(lst): return statistics.mean(lst)
     def std(lst): return statistics.stdev(lst) if len(lst) > 1 else 0.0
@@ -257,20 +256,13 @@ def rodar_experimento(N: int, caminho: str, usar_avl: bool) -> dict:
         "N":                 N,
         # Inserção
         "ins_tempo_med":     med(ins["tempo"]),
-        "ins_tempo_std":     std(ins["tempo"]),
+        "ins_iter_med":      med(ins["iter_media"]),
         "ins_mem_trace_kb":  med(ins["mem_trace"]),
-        "ins_mem_ram_kb":    med(ins["mem_ram"]),
         "ins_cpu_media_pct": med(ins["cpu_media"]),
-        "ins_cpu_pico_pct":  med(ins["cpu_pico"]),
         "altura_media":      med(ins["altura"]),
-        "altura_std":        std(ins["altura"]),
         # Busca
         "bus_tempo_med":     med(bus["tempo"]),
-        "bus_tempo_std":     std(bus["tempo"]),
         "bus_iter_med":      med(bus["iter_media"]),
-        "bus_iter_std":      std(bus["iter_media"]),
         "bus_mem_trace_kb":  med(bus["mem_trace"]),
-        "bus_mem_ram_kb":    med(bus["mem_ram"]),
         "bus_cpu_media_pct": med(bus["cpu_media"]),
-        "bus_cpu_pico_pct":  med(bus["cpu_pico"]),
     }

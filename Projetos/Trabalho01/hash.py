@@ -1,23 +1,3 @@
-"""
-hash_table.py
-─────────────
-Implementação da Tabela Hash com encadeamento separado e
-três funções hash distintas.
-
-Parâmetros avaliados:
-  - M (tamanho da tabela): 100, 1000, 5000
-  - Funções hash: Divisão, Multiplicação, Meio-Quadrado
-
-Métricas coletadas por operação:
-  - Tempo de Execução (s)
-  - Memória Alocada pelo Programa (KB)  — tracemalloc
-  - RAM Consumida (KB)                  — psutil
-  - CPU Médio e Pico (%)                — psutil + thread
-  - Comparações por Busca               — contagem interna
-  - Colisões Totais                     — contagem interna
-  - Fator de Carga (N/M)                — contagem interna
-"""
-
 import math
 import random
 import statistics
@@ -66,11 +46,7 @@ class Registro:
 # ─────────────────────────────────────────────
 
 class TabelaHash:
-    """
-    Tabela Hash com encadeamento separado (chaining).
-    Colisões são resolvidas com listas ligadas em cada posição.
-    Suporta três funções hash selecionáveis por parâmetro.
-    """
+  
 
     HASH_DIVISAO      = 1
     HASH_MULTIPLICACAO = 2
@@ -83,11 +59,7 @@ class TabelaHash:
     }
 
     def __init__(self, tamanho_m: int):
-        """
-        tamanho_m: tamanho da tabela (M).
-        Testado com M = 100, 1000, 5000.
-        Quanto menor M, maior o fator de carga e mais colisões esperadas.
-        """
+     
         self.M                  = tamanho_m
         self.tabela             = [[] for _ in range(self.M)]
         self.elementos_inseridos = 0
@@ -142,17 +114,20 @@ class TabelaHash:
 
     # ── Inserção ──────────────────────────────────────────────
 
-    def inserir(self, registro: Registro, tipo_hash: int = 1):
+    def inserir(self, registro: Registro, tipo_hash: int = 1) -> int:
         """
         Insere registro na tabela. Se já existe elemento no índice,
         registra colisão e encadeia na lista.
         Complexidade: O(1) médio, O(n) pior caso.
+        Retorna: comprimento da cadeia antes da inserção (iterações de colisão).
         """
         indice = self.obter_indice(registro.matricula, tipo_hash)
-        if len(self.tabela[indice]) > 0:
+        iteracoes = len(self.tabela[indice])  # percurso necessário por colisões
+        if iteracoes > 0:
             self.colisoes_totais += 1
         self.tabela[indice].append(registro)
         self.elementos_inseridos += 1
+        return iteracoes + 1  # +1 pela inserção em si
 
     # ── Busca ─────────────────────────────────────────────────
 
@@ -191,12 +166,14 @@ def _converter_registro(row: dict) -> Registro:
     )
 
 
-def _fazer_insercao(registros: list, M: int, tipo_hash: int) -> TabelaHash:
+def _fazer_insercao(registros: list, M: int, tipo_hash: int) -> tuple:
     tabela = TabelaHash(M)
+    total = 0
     for row in registros:
         reg = _converter_registro(row)
-        tabela.inserir(reg, tipo_hash)
-    return tabela
+        total += tabela.inserir(reg, tipo_hash)
+    iter_media = total / len(registros) if registros else 0.0
+    return tabela, iter_media
 
 
 def _fazer_busca(tabela: TabelaHash, chaves: list, tipo_hash: int) -> dict:
@@ -241,7 +218,7 @@ def rodar_experimento(N: int, caminho: str) -> list[dict]:
             print(f"  TABELA HASH | N={N:,} | M={M} | Hash: {nome_hash}")
             print(f"{'═'*65}")
 
-            ins = {"tempo": [], "mem_trace": [], "mem_ram": [],
+            ins = {"tempo": [], "iter_media": [], "mem_trace": [], "mem_ram": [],
                    "cpu_media": [], "cpu_pico": [],
                    "colisoes": [], "load_factor": []}
             bus = {"tempo": [], "iter_media": [], "mem_trace": [],
@@ -251,8 +228,9 @@ def rodar_experimento(N: int, caminho: str) -> list[dict]:
                 chaves = [r["matricula"] for r in random.sample(registros_base, NUM_BUSCAS)]
 
                 # ── Inserção ──────────────────────────────────
-                tabela, m_ins = medir_bloco(_fazer_insercao, registros_base, M, tipo_hash)
+                (tabela, ins_it), m_ins = medir_bloco(_fazer_insercao, registros_base, M, tipo_hash)
                 ins["tempo"].append(m_ins["tempo_s"])
+                ins["iter_media"].append(ins_it)
                 ins["mem_trace"].append(m_ins["mem_trace_kb"])
                 ins["mem_ram"].append(m_ins["mem_ram_kb"])
                 ins["cpu_media"].append(m_ins["cpu_media_pct"])
@@ -272,15 +250,8 @@ def rodar_experimento(N: int, caminho: str) -> list[dict]:
                 bus["cpu_pico"].append(m_bus["cpu_pico_pct"])
 
                 print(f"\n  Rodada {rodada}:")
-                print(f"    [Inserção] Tempo={m_ins['tempo_s']:.4f}s  "
-                      f"Mem={m_ins['mem_trace_kb']:.1f}KB  "
-                      f"CPU={m_ins['cpu_media_pct']:.1f}%  "
-                      f"Colisões={tabela.colisoes_totais}  "
-                      f"Fator de Carga={tabela.calcular_load_factor():.2f}")
-                print(f"    [Busca]    Tempo={m_bus['tempo_s']:.6f}s  "
-                      f"Comparações={dados_bus['iter_media']:.2f}  "
-                      f"Mem={m_bus['mem_trace_kb']:.1f}KB  "
-                      f"CPU={m_bus['cpu_media_pct']:.1f}%")
+                print(f"    [Inserção] tempo={m_ins['tempo_s']:.4f}s  iter={ins_it:.2f}  mem={m_ins['mem_trace_kb']:.1f}KB  cpu={m_ins['cpu_media_pct']:.1f}%  colisões={tabela.colisoes_totais}  λ={tabela.calcular_load_factor():.2f}")
+                print(f"    [Busca]    tempo={m_bus['tempo_s']:.6f}s  iter={dados_bus['iter_media']:.2f}  mem={m_bus['mem_trace_kb']:.1f}KB  cpu={m_bus['cpu_media_pct']:.1f}%")
 
             def med(lst): return statistics.mean(lst)
             def std(lst): return statistics.stdev(lst) if len(lst) > 1 else 0.0
@@ -294,27 +265,21 @@ def rodar_experimento(N: int, caminho: str) -> list[dict]:
                 "colisoes_totais":   med(ins["colisoes"]),
                 # Inserção
                 "ins_tempo_med":     med(ins["tempo"]),
-                "ins_tempo_std":     std(ins["tempo"]),
+                "ins_iter_med":      med(ins["iter_media"]),
                 "ins_mem_trace_kb":  med(ins["mem_trace"]),
-                "ins_mem_ram_kb":    med(ins["mem_ram"]),
                 "ins_cpu_media_pct": med(ins["cpu_media"]),
-                "ins_cpu_pico_pct":  med(ins["cpu_pico"]),
                 # Busca
                 "bus_tempo_med":     med(bus["tempo"]),
-                "bus_tempo_std":     std(bus["tempo"]),
                 "bus_iter_med":      med(bus["iter_media"]),
-                "bus_iter_std":      std(bus["iter_media"]),
                 "bus_mem_trace_kb":  med(bus["mem_trace"]),
-                "bus_mem_ram_kb":    med(bus["mem_ram"]),
                 "bus_cpu_media_pct": med(bus["cpu_media"]),
-                "bus_cpu_pico_pct":  med(bus["cpu_pico"]),
             }
 
             # Tabela de resumo legível no terminal
             imprimir_tabela(
                 f"RESUMO — Hash {nome_hash} | M={M} | N={N:,} (média de {NUM_RODADAS} rodadas)",
                 resultado,
-                ignorar={"estrutura", "hash_nome"},
+                ignorar={"estrutura", "hash_nome"}
             )
 
             todos_resultados.append(resultado)

@@ -28,6 +28,8 @@ NOMES_METRICAS = {
     # Inserção
     "ins_tempo_med":     "Tempo de Inserção (s)",
     "ins_tempo_std":     "Tempo de Inserção — Desvio (s)",
+    "ins_iter_med":      "Iterações médias na Inserção",
+    "ins_iter_std":      "Iterações na Inserção — Desvio",
     "ins_mem_trace_kb":  "Memória Alocada na Inserção (KB)",
     "ins_mem_ram_kb":    "RAM Consumida na Inserção (KB)",
     "ins_cpu_media_pct": "CPU Médio na Inserção (%)",
@@ -75,7 +77,7 @@ class MonitorCPU:
     enquanto uma operação está sendo executada.
     """
 
-    def __init__(self, intervalo: float = 0.05):
+    def __init__(self, intervalo: float = 0.01):
         self.intervalo = intervalo
         self.amostras: list[float] = []
         self._rodando = False
@@ -84,14 +86,16 @@ class MonitorCPU:
     def iniciar(self):
         self.amostras = []
         self._rodando = True
+        # Warmup: estabelece linha de base para cpu_percent (1ª chamada sempre retorna 0)
+        psutil.Process(os.getpid()).cpu_percent(interval=None)
         self._thread = threading.Thread(target=self._coletar, daemon=True)
         self._thread.start()
 
     def _coletar(self):
         processo = psutil.Process(os.getpid())
         while self._rodando:
-            self.amostras.append(processo.cpu_percent(interval=None))
             time.sleep(self.intervalo)
+            self.amostras.append(processo.cpu_percent(interval=None))
 
     def parar(self) -> tuple[float, float]:
         self._rodando = False

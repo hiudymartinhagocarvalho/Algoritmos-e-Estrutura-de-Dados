@@ -30,22 +30,16 @@ from array_linear import rodar_experimento as exp_array
 from arvore       import rodar_experimento as exp_arvore
 from hash         import rodar_experimento as exp_hash
 
-
-# ─────────────────────────────────────────────
-# CONFIGURAÇÃO DOS VOLUMES
-# ─────────────────────────────────────────────
-
 _BASE = os.path.dirname(__file__)
 ARQUIVOS = {
     10_000:  os.path.join(_BASE, "datasets", "dados_10000.csv"),
     50_000:  os.path.join(_BASE, "datasets", "dados_50000.csv"),
-    100_000: os.path.join(_BASE, "datasets", "dados_100000.csv"),
+    100_000:  os.path.join(_BASE, "datasets", "dados_100000.csv"),
+    250_000:  os.path.join(_BASE, "datasets", "dados_250000.csv"),
+    500_000: os.path.join(_BASE, "datasets", "dados_500000.csv"),
+    750_000: os.path.join(_BASE, "datasets", "dados_750000.csv"),
+    1_000_000: os.path.join(_BASE, "datasets", "dados_1000000.csv"),
 }
-
-
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
 
 def main():
     res_array   = []
