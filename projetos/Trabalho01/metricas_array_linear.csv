@@ -1,5 +1,0 @@
-Operação,Tempo Total (ms),Tempo CPU (ms),Pico Memória (KB),Iterações/Custo
-Busca Linear,44.4601,46.875,0.14,50000
-Busca Binária,0.0264,0.0,0.12,15
-Inserção Início,0.1047,0.0,439.53,50001
-Inserção Final,0.0041,0.0,439.5,1

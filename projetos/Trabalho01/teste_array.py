@@ -92,11 +92,11 @@ dados_finais = executar_experimento(caminho_datasets, lista_arquivos)
 
 # Salvar em CSV detalhado
 df_final = pd.DataFrame(dados_finais)
-df_final.to_csv("experimento_detalhado_rodadas.csv", index=False)
+df_final.to_csv("array.csv", index=False)
 
 # Exibir uma prévia da média para conferência rápida
 print("\n--- RESUMO MÉDIO (Para conferência) ---")
 resumo = df_final.groupby(['Dataset', 'Operação'])[['Tempo Real (ms)', 'Tempo CPU (ms)', 'Memória Pico (KB)']].mean()
 print(resumo)
 
-print("\nArquivo 'experimento_detalhado_rodadas.csv' gerado com sucesso!")
+print("\nArquivo 'array.csv' gerado com sucesso!")
