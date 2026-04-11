@@ -1,12 +1,13 @@
 import networkx as nx
 import time
 from heapq import heappush, heappop
+import os
 
 # =========================
 # carregar grafo
 # =========================
 G = nx.read_weighted_edgelist(
-    "p2p-Gnutella08.txt",
+    os.path.join(os.path.dirname(__file__), "p2p-Gnutella08.txt"),
     create_using=nx.DiGraph(),
     nodetype=int
 )

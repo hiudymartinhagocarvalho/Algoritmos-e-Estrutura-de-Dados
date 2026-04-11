@@ -2,10 +2,11 @@ import networkx as nx
 import time
 from heapq import heappush, heappop
 import ast
+import os
 
 G = nx.DiGraph()
 
-with open("congress.edgelist") as f:
+with open(os.path.join(os.path.dirname(__file__), "congress.edgelist")) as f:
     for line in f:
         parts = line.strip().split(maxsplit=2)
 
