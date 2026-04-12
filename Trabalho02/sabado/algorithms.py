@@ -21,158 +21,228 @@ from collections import deque
 # ──────────────────────────────────────────────────────────────────────────────
 def dijkstra(graph, start, goal):
     """
-    Dijkstra's algorithm.
-    Priority: g(n) = accumulated cost from start to n.
-    Expands in order of lowest accumulated cost; guaranteed optimal.
+    Algoritmo de Dijkstra (Sem bibliotecas externas).
+    Prioridade: g(n) = custo acumulado do início até n.
+    Expande na ordem do menor custo acumulado; garante o caminho ótimo.
     """
-    _ctr = 0
-    # heap entries: (g, tie_break, node, path)
-    heap = [(0, _ctr, start, [start])]
-    closed = {}   # node -> best g seen (once popped)
+    # A "fronteira" guarda os caminhos a serem explorados.
+    # Formato: (custo_g, no_atual, caminho_ate_aqui)
+    # Não precisamos do tie_break (_ctr) aqui, pois a busca manual resolve isso.
+    frontier = [(0, start, [start])]
+    
+    # Dicionário de nós fechados/visitados: no -> melhor custo g visto
+    closed = {} 
 
-    while heap:
-        g, _, node, path = heapq.heappop(heap)
+    while frontier:
+        # --- Simulando o heapq.heappop(heap) sem bibliotecas ---
+        # Busca o nó com o menor custo g na lista da fronteira
+        min_index = 0
+        for i in range(1, len(frontier)):
+            if frontier[i][0] < frontier[min_index][0]:
+                min_index = i
+        
+        # Remove e pega os dados do caminho mais promissor
+        g, node, path = frontier.pop(min_index)
+        # -------------------------------------------------------
 
+        # Se já expandimos este nó com um custo igual ou menor, ignoramos
         if node in closed:
             continue
+            
+        # Marca o nó como fechado/expandido com seu custo mínimo
         closed[node] = g
 
+        # Se chegamos ao objetivo, retornamos exatamente no seu formato
         if node == goal:
             return path, g, len(closed)
 
+        # Expande os vizinhos usando o método da classe do grafo
         for nbr, w in graph.get_neighbors(node):
             if nbr not in closed:
-                _ctr += 1
-                heapq.heappush(heap, (g + w, _ctr, nbr, path + [nbr]))
+                # Adiciona o novo caminho à fronteira
+                frontier.append((g + w, nbr, path + [nbr]))
 
+    # Se a fronteira esvaziar e não acharmos o objetivo
     return None, float('inf'), len(closed)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 def greedy_best_first(graph, start, goal):
     """
-    Greedy Best-First Search.
-    Priority: h(n) = straight-line distance to goal (heuristic only).
-    Fast but suboptimal — ignores accumulated cost.
+    Algoritmo Greedy Best-First Search (Busca Gulosa) sem bibliotecas.
+    Prioridade: f(n) = h(n).
+    Ignora o custo real g(n) para tomada de decisão, usando apenas o "palpite" da heurística.
+    Rápido, mas NÃO garante o caminho ótimo/mais curto.
     """
-    _ctr = 0
-    h0 = graph.heuristic(start, goal)
-    # heap entries: (h, tie_break, node, path, g)
-    heap = [(h0, _ctr, start, [start], 0)]
-    visited = set()
-    expanded = 0
+    # A fronteira guarda o (Custo Heurístico H, Custo Real G, nó, caminho)
+    # Precisamos rastrear o 'g' apenas para saber o custo final do caminho ao terminar,
+    # mas ele NÃO será usado para decidir qual caminho pegar.
+    frontier = [(0, 0, start, [start])]
 
-    while heap:
-        h, _, node, path, g = heapq.heappop(heap)
+    # Conjunto de nós já visitados
+    closed = set()
 
-        if node in visited:
+    while frontier:
+        # --- Simulando a fila de prioridade ---
+        # Busca o nó com o menor custo H (o que parece mais perto do fim)
+        min_index = 0
+        for i in range(1, len(frontier)):
+            if frontier[i][0] < frontier[min_index][0]:
+                min_index = i
+        
+        # Remove e desempacota o caminho
+        h, g, node, path = frontier.pop(min_index)
+        # --------------------------------------
+
+        # Se já fechamos este nó, ignoramos (evita loops)
+        if node in closed:
             continue
-        visited.add(node)
-        expanded += 1
+            
+        # Marca o nó como visitado
+        closed.add(node)
 
+        # Se chegamos ao objetivo, retornamos (o 'g' rastreado nos diz quanto custou)
         if node == goal:
-            return path, g, expanded
+            return path, g, len(closed)
 
+        # Expande os vizinhos
         for nbr, w in graph.get_neighbors(node):
-            if nbr not in visited:
-                _ctr += 1
-                heapq.heappush(heap, (graph.heuristic(nbr, goal), _ctr,
-                                      nbr, path + [nbr], g + w))
+            if nbr not in closed:
+                novo_g = g + w  # Acumula o custo real para estatística final
 
-    return None, float('inf'), expanded
+                # Adiciona à fronteira ordenando EXCLUSIVAMENTE pelo palpite (h=0)
+                frontier.append((0, novo_g, nbr, path + [nbr]))
 
+    # Se a fronteira esvaziar e não acharmos o objetivo
+    return None, float('inf'), len(closed)
 
 # ──────────────────────────────────────────────────────────────────────────────
 def a_star(graph, start, goal):
     """
-    A* Search.
-    Priority: f(n) = g(n) + h(n).
-    Combines Dijkstra's cost-awareness with Greedy's directional bias.
-    Optimal when h is admissible (Euclidean distance never overestimates road km).
+    Algoritmo A* (A-Star) sem bibliotecas.
+    Prioridade: f(n) = g(n) + h(n).
+    g(n) = custo exato acumulado da origem até n.
+    h(n) = estimativa heurística de n até o objetivo.
     """
-    _ctr = 0
-    h0 = graph.heuristic(start, goal)
-    # heap entries: (f, g, tie_break, node, path)
-    heap = [(h0, 0, _ctr, start, [start])]
-    best_g = {}   # node -> lowest g seen when expanded
-    expanded = 0
+    # A fronteira agora guarda o custo F, o custo G, o nó e o caminho.
+    # f_inicial = g(0) + h(start) = 0 + 0
+    frontier = [(0, 0, start, [start])]
+    
+    # Dicionário de nós fechados: no -> melhor custo G visto
+    # (No A*, guardamos o G, não o F, para saber se achamos um atalho real para um nó já visto)
+    closed = {} 
 
-    while heap:
-        f, g, _, node, path = heapq.heappop(heap)
+    while frontier:
+        # --- Simulando a fila de prioridade ---
+        # Busca o nó com o menor custo F (f = g + h)
+        min_index = 0
+        for i in range(1, len(frontier)):
+            if frontier[i][0] < frontier[min_index][0]:
+                min_index = i
+        
+        # Remove e desempacota o caminho mais promissor
+        f, g, node, path = frontier.pop(min_index)
+        # --------------------------------------
 
-        if node in best_g and best_g[node] <= g:
+        # Se já fechamos este nó com um custo G menor ou igual, ignoramos
+        if node in closed and closed[node] <= g:
             continue
-        best_g[node] = g
-        expanded += 1
+            
+        # Marca o nó como fechado com seu custo G mínimo
+        closed[node] = g
 
+        # Se chegamos ao objetivo, retornamos (o G será o custo total exato)
         if node == goal:
-            return path, g, expanded
+            return path, g, len(closed)
 
+        # Expande os vizinhos
         for nbr, w in graph.get_neighbors(node):
-            g_new = g + w
-            if nbr not in best_g or best_g[nbr] > g_new:
-                h_new = graph.heuristic(nbr, goal)
-                _ctr += 1
-                heapq.heappush(heap, (g_new + h_new, g_new, _ctr, nbr, path + [nbr]))
+            novo_g = g + w
+            
+            # Só exploramos o vizinho se nunca o vimos, ou se achamos um caminho MAIS BARATO até ele
+            if nbr not in closed or novo_g < closed[nbr]:
+                frontier.append((novo_g, novo_g, nbr, path + [nbr]))
 
-    return None, float('inf'), expanded
-
+    # Se a fronteira esvaziar e não acharmos o objetivo
+    return None, float('inf'), len(closed)
 
 # ──────────────────────────────────────────────────────────────────────────────
 def dfs(graph, start, goal):
     """
-    Depth-First Search (iterative).
-    Explores deepest nodes first via LIFO stack.
-    Does NOT guarantee optimal path on weighted graphs.
+    Algoritmo de Busca em Profundidade (DFS) sem bibliotecas.
+    Usa uma Pilha (Stack) para explorar o grafo o mais fundo possível antes de retroceder.
+    Aviso: O DFS encontra *um* caminho, mas NÃO garante que seja o caminho mais curto/barato.
     """
-    # stack entries: (node, path, g)
-    stack = [(start, [start], 0)]
-    visited = set()
-    expanded = 0
+    # A "pilha" guarda os caminhos a serem explorados.
+    # Formato: (custo_g, no_atual, caminho_ate_aqui)
+    stack = [(0, start, [start])]
+    
+    # Conjunto de nós já visitados para evitar loops infinitos
+    closed = set() 
 
     while stack:
-        node, path, g = stack.pop()
+        # Tira o ÚLTIMO elemento adicionado na lista (comportamento de Pilha/Stack)
+        # Isso é O(1) e muito mais rápido que a busca do Dijkstra!
+        g, node, path = stack.pop()
 
-        if node in visited:
+        # Se já visitamos este nó, ignoramos para não andar em círculos
+        if node in closed:
             continue
-        visited.add(node)
-        expanded += 1
+            
+        # Marca o nó como visitado
+        closed.add(node)
 
+        # Se chegamos ao objetivo, retornamos
         if node == goal:
-            return path, g, expanded
+            return path, g, len(closed)
 
-        # push in reverse so first neighbor is explored first
-        for nbr, w in reversed(graph.get_neighbors(node)):
-            if nbr not in visited:
-                stack.append((nbr, path + [nbr], g + w))
+        # Expande os vizinhos
+        for nbr, w in graph.get_neighbors(node):
+            # Só adicionamos à pilha se o vizinho ainda não foi explorado
+            if nbr not in closed:
+                # Adiciona o novo caminho no topo da pilha
+                stack.append((g + w, nbr, path + [nbr]))
 
-    return None, float('inf'), expanded
-
+    # Se a pilha esvaziar e não acharmos o objetivo
+    return None, float('inf'), len(closed)
 
 # ──────────────────────────────────────────────────────────────────────────────
 def bfs(graph, start, goal):
     """
-    Breadth-First Search.
-    Explores level by level via FIFO queue.
-    Optimal for unweighted graphs (min edges); NOT optimal for weighted graphs.
+    Algoritmo de Busca em Largura (BFS) sem bibliotecas.
+    Usa uma Fila (Queue) para explorar o grafo em camadas (nível por nível).
+    Garante o caminho com o menor número de nós, mas ignora o peso das arestas.
     """
-    queue = deque([(start, [start], 0)])
-    visited = set()
-    expanded = 0
+    # A "fila" guarda os caminhos a serem explorados.
+    # Formato: (custo_g, no_atual, caminho_ate_aqui)
+    queue = [(0, start, [start])]
+    
+    # Conjunto de nós já visitados para evitar loops
+    closed = set() 
 
     while queue:
-        node, path, g = queue.popleft()
+        # Tira o PRIMEIRO elemento adicionado na lista (comportamento de Fila/Queue)
+        # Nota: .pop(0) em listas nativas do Python move todos os elementos, 
+        # então é um pouco mais lento que um deque real, mas atende à regra "sem bibliotecas".
+        g, node, path = queue.pop(0)
 
-        if node in visited:
+        # Se já visitamos este nó, ignoramos
+        if node in closed:
             continue
-        visited.add(node)
-        expanded += 1
+            
+        # Marca o nó como visitado
+        closed.add(node)
 
+        # Se chegamos ao objetivo, retornamos
         if node == goal:
-            return path, g, expanded
+            return path, g, len(closed)
 
+        # Expande os vizinhos
         for nbr, w in graph.get_neighbors(node):
-            if nbr not in visited:
-                queue.append((nbr, path + [nbr], g + w))
+            # Só adicionamos à fila se o vizinho ainda não foi explorado
+            if nbr not in closed:
+                # Adiciona o novo caminho no FINAL da fila
+                queue.append((g + w, nbr, path + [nbr]))
 
-    return None, float('inf'), expanded
+    # Se a fila esvaziar e não acharmos o objetivo
+    return None, float('inf'), len(closed)

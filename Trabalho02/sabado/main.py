@@ -1,16 +1,3 @@
-"""
-Graph and Search Algorithms Analysis
-PUCPR · Pós-Graduação em Informática Aplicada
-Fundamentos de Algoritmos e Estrutura de Dados
-
-Graph: US Congress Twitter Influence Network (full — 475 nodes)
-
-5 origin–destination pairs × 5 algorithms × 5 repetitions.
-Metrics: execution time (ms), peak memory (KB), nodes expanded.
-After the experiments, matplotlib PNG images are generated for each algorithm
-showing the path taken on the full Congress graph.
-"""
-
 import os
 
 from graph_loaders  import (load_congress_full_graph, find_reachable_pairs)
